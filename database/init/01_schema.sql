@@ -115,13 +115,15 @@ CREATE TABLE statut.historique_statuts (
 CREATE INDEX idx_historique_colis_date
 ON statut.historique_statuts(colis_id, date_changement DESC);
 
+
 -- ==========================================
 -- 6. NOTIFICATION SERVICE
 -- ==========================================
 
 CREATE TABLE notification.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    colis_id UUID NOT NULL,
+    livraison_id UUID NOT NULL
+        REFERENCES livraison.livraisons(id),
     email_destinataire VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL,
     message TEXT NOT NULL,
@@ -130,8 +132,9 @@ CREATE TABLE notification.notifications (
     date_envoi TIMESTAMPTZ
 );
 
-CREATE INDEX idx_notifications_colis
-ON notification.notifications(colis_id);
+CREATE INDEX idx_notifications_livraison
+ON notification.notifications(livraison_id);
+
 
 -- ==========================================
 -- 7. INITIAL DATA

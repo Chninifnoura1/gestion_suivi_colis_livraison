@@ -138,10 +138,14 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 
+
+-- ==========================================
 -- 6. DEMO NOTIFICATION
+-- ==========================================
+
 INSERT INTO notification.notifications (
     id,
-    colis_id,
+    livraison_id,
     email_destinataire,
     type,
     message,
@@ -150,14 +154,15 @@ INSERT INTO notification.notifications (
 )
 VALUES (
     '77777777-7777-4777-8777-777777777777',
-    '33333333-3333-4333-8333-333333333333',
+    '44444444-4444-4444-8444-444444444444',
     'sara.demo@example.com',
     'EMAIL',
-    'Votre colis SC-2026-DEMO-001 est en cours de livraison.',
+    'Votre livraison est en cours.',
     'ENVOYEE',
     NOW()
 )
 ON CONFLICT (id) DO NOTHING;
+
 
 -- ==========================================
 -- END OF DEMO DATA
