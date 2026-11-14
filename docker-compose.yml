@@ -55,6 +55,34 @@ services:
     networks:
       - suivi_colis_network
 
+  # =================================
+  # COLIS SERVICE
+  # =================================
+  colis-service:
+    build:
+      context: ./services/colis-service
+      dockerfile: Dockerfile
+
+    container_name: colis_service
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+
+    ports:
+      - "8003:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - suivi_colis_network
+
 # =================================
 # PERSISTENT VOLUMES
 # =================================
