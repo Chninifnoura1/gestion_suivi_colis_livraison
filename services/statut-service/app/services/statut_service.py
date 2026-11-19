@@ -16,7 +16,7 @@ def colis_exists(colis_id) -> bool | None:
         return True
 
     try:
-        response = httpx.get(f"{base_url}/api/v1/colis/{colis_id}", timeout=3)
+        response = httpx.get(f"{base_url}/api/colis/{colis_id}", timeout=3)
     except httpx.HTTPError:
         return None
 
@@ -35,14 +35,21 @@ def notify_status_change(entry: HistoriqueStatut) -> None:
     if not base_url:
         return
 
+    headers = {}
+    internal_key = os.getenv("INTERNAL_API_KEY")
+    if internal_key:
+        headers["X-Internal-Key"] = internal_key
+
     try:
         httpx.post(
-            f"{base_url}/api/v1/notifications/",
+            f"{base_url}/notifications/statut",
             json={
-                "colis_id": str(entry.colis_id),
-                "type": entry.code,
-                "message": f"Votre colis est : {entry.libelle}",
+                "colisId": str(entry.colis_id),
+                "statutCode": entry.code,
+                "localisation": entry.localisation,
+                "motif": entry.motif_echec,
             },
+            headers=headers,
             timeout=3,
         )
     except httpx.HTTPError:
@@ -81,3 +88,5 @@ def get_history(db: Session, colis_id) -> list[HistoriqueStatut]:
     return db.query(HistoriqueStatut).filter(
         HistoriqueStatut.colis_id == colis_id
     ).order_by(HistoriqueStatut.date_changement.asc()).all()
+
+
