@@ -104,14 +104,78 @@ def create_app(config=None, notification_service=None):
     @app.get("/health")
     def health():
         return jsonify(status="ok")
+    
+    @app.post("/notifications/livreurs")
+    def create_courier_notification():
+        data = request.get_json(silent=True)
 
+        if not isinstance(data, dict):
+            raise ValidationError("Le corps JSON est requis")
+
+        livreur_id = _uuid(data.get("livreur_id"), "livreur_id")
+        livraison_id = _uuid(data.get("livraison_id"), "livraison_id")
+
+        title = data.get("title")
+        message = data.get("message")
+        category = data.get("category", "Affectation")
+
+        if not isinstance(title, str) or not title.strip():
+            raise ValidationError("title est requis")
+
+        if not isinstance(message, str) or not message.strip():
+            raise ValidationError("message est requis")
+
+        notification = notification_service.creer_notification_livreur(
+            livreur_id=livreur_id,
+            livraison_id=livraison_id,
+            title=title.strip(),
+            message=message.strip(),
+            category=category,
+        )
+
+        return jsonify(_json_value(notification)), 201
     @app.post("/notifications/statut")
     def notify_status():
-        colis_id, code, location, reason = _status_payload(request.get_json(silent=True))
+        colis_id, code, location, reason = _status_payload(
+            request.get_json(silent=True)
+        )
         notification = notification_service.creer_pour_statut(
             colis_id, code, localisation=location, motif=reason
         )
-        return jsonify(_json_value(notification)), 201
+        if notification is None:
+            return jsonify({"message": "Aucune notification pour ce statut"}), 200
+
+        return jsonify(_json_value(notification)), 200
+
+
+    @app.post("/notifications/arrivee-agence")
+    def notify_arrival_agency():
+        data = request.get_json(silent=True)
+
+        if not isinstance(data, dict):
+            raise ValidationError("Le corps JSON est requis")
+
+        colis_id = _uuid(data.get("colisId"), "colisId")
+
+        livraison_value = data.get("livraisonId")
+        livraison_id = (
+            _uuid(livraison_value, "livraisonId")
+            if livraison_value is not None
+            else None
+        )
+
+        location = data.get("localisation")
+        if location is not None and not isinstance(location, str):
+            raise ValidationError("localisation doit être une chaîne de caractères")
+
+        notification = notification_service.creer_pour_arrivee_agence(
+            colis_id,
+            livraison_id=livraison_id,
+            localisation=location,
+        )
+
+        return jsonify(_json_value(notification)), 200
+
 
     @app.post("/notifications")
     def create_notification():

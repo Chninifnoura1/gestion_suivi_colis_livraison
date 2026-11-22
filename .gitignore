@@ -24,3 +24,6 @@ htmlcov/
 .DS_Store
 Thumbs.db
 !.env.example
+# Local backup and temporary files
+backup_avant_trajets_20261121.sql
+/code

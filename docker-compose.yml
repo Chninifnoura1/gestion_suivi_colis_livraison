@@ -14,18 +14,21 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
+
     ports:
       - "5432:5432"
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./database/init/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./database/seed/02_demo_data.sql:/docker-entrypoint-initdb.d/02_demo_data.sql:ro
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
     networks:
       - suivi_colis_network
@@ -72,9 +75,46 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
+      AUTH_SECRET_KEY: ${AUTH_SECRET_KEY}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      NOTIFICATION_SERVICE_URL: http://notification-service:5005
 
     ports:
       - "8003:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      notification-service:
+        condition: service_started
+
+    networks:
+      - suivi_colis_network
+
+
+  # =================================
+  # AUTH SERVICE
+  # =================================
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+
+    container_name: auth_service
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      AUTH_SECRET_KEY: ${AUTH_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+
+    ports:
+      - "8001:8000"
 
     depends_on:
       postgres:
@@ -83,12 +123,120 @@ services:
     networks:
       - suivi_colis_network
 
+  # =================================
+  # LIVRAISON SERVICE
+  # =================================
+  livraison-service:
+    build:
+      context: ./services/livraison-service
+      dockerfile: Dockerfile
+
+    container_name: livraison_service
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      AUTH_SECRET_KEY: ${AUTH_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      COLIS_SERVICE_URL: http://colis-service:8000
+      NOTIFICATION_SERVICE_URL: http://notification-service:5005
+
+    ports:
+      - "8004:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      notification-service:
+        condition: service_started
+
+    networks:
+      - suivi_colis_network
+  # =================================
+  # STATUT SERVICE
+  # =================================
+  statut-service:
+    build:
+      context: ./services/statut-service
+      dockerfile: Dockerfile
+
+    container_name: statut_service
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      AUTH_SECRET_KEY: ${AUTH_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      COLIS_SERVICE_URL: http://colis-service:8000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      NOTIFICATION_SERVICE_URL: http://notification-service:5005
+
+    ports:
+      - "8005:5003"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      colis-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+
+    networks:
+      - suivi_colis_network
+
+  # =================================
+  # NOTIFICATION SERVICE
+  # =================================
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+
+    container_name: notification_service
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      PORT: 5005
+      NOTIFICATION_MODE: ${NOTIFICATION_MODE:-mock}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+
+    ports:
+      - "8006:5005"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - suivi_colis_network
 # =================================
 # PERSISTENT VOLUMES
 # =================================
 volumes:
   postgres_data:
   pgadmin_data:
+
 
 # =================================
 # NETWORK

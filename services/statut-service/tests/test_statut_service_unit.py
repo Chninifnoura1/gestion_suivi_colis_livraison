@@ -15,61 +15,66 @@ from app.services import statut_service
 
 # ---------- helpers ----------
 class FakeResponse:
-    def __init__(self, status_code):
+    def __init__(self, status_code, data=None):
         self.status_code = status_code
+        self.data = data or {}
+
+    def json(self):
+        return self.data
 
 
-def make_data(code="EN_COURS"):
-    return StatutCreate(colis_id=uuid.uuid4(), code=code)
-
-
-def make_db(reference):
-    # Fake session: db.query(Statut).filter(...).first() returns `reference`
-    db = MagicMock()
-    db.query.return_value.filter.return_value.first.return_value = reference
-    return db
-
-
-def make_ref(code="LIVRE", libelle="Livre"):
-    return Statut(id=uuid.uuid4(), code=code, libelle=libelle)
-
-
-# ---------- colis_exists ----------
-def test_colis_exists_sans_url_verification_ignoree(monkeypatch):
-    """Edge case: COLIS_SERVICE_URL not set -> check skipped -> True"""
+def test_colis_exists_sans_configuration(monkeypatch):
     monkeypatch.delenv("COLIS_SERVICE_URL", raising=False)
-    assert statut_service.colis_exists(uuid.uuid4()) is True
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+
+    assert statut_service.colis_exists(uuid.uuid4()) is None
 
 
 def test_colis_exists_colis_trouve(monkeypatch):
-    """Normal case: Colis service answers 200 -> True"""
     monkeypatch.setenv("COLIS_SERVICE_URL", "http://fake")
-    monkeypatch.setattr(statut_service.httpx, "get", lambda *a, **k: FakeResponse(200))
+    monkeypatch.setenv("INTERNAL_API_KEY", "test-key")
+    monkeypatch.setattr(
+        statut_service.httpx,
+        "get",
+        lambda *a, **k: FakeResponse(200, {"exists": True}),
+    )
+
     assert statut_service.colis_exists(uuid.uuid4()) is True
 
 
 def test_colis_exists_colis_introuvable(monkeypatch):
-    """Normal case: Colis service answers 404 -> False"""
     monkeypatch.setenv("COLIS_SERVICE_URL", "http://fake")
-    monkeypatch.setattr(statut_service.httpx, "get", lambda *a, **k: FakeResponse(404))
+    monkeypatch.setenv("INTERNAL_API_KEY", "test-key")
+    monkeypatch.setattr(
+        statut_service.httpx,
+        "get",
+        lambda *a, **k: FakeResponse(404),
+    )
+
     assert statut_service.colis_exists(uuid.uuid4()) is False
 
 
 def test_colis_exists_service_indisponible(monkeypatch):
-    """Error case: Colis service unreachable -> None"""
     monkeypatch.setenv("COLIS_SERVICE_URL", "http://fake")
+    monkeypatch.setenv("INTERNAL_API_KEY", "test-key")
 
     def boom(*a, **k):
-        raise httpx.ConnectError("service down")
+        raise statut_service.httpx.ConnectError("down")
 
     monkeypatch.setattr(statut_service.httpx, "get", boom)
+
     assert statut_service.colis_exists(uuid.uuid4()) is None
 
 
 def test_colis_exists_service_en_erreur_500(monkeypatch):
-    """Error case: Colis service crashes (500) -> must NOT say 'not found'"""
     monkeypatch.setenv("COLIS_SERVICE_URL", "http://fake")
-    monkeypatch.setattr(statut_service.httpx, "get", lambda *a, **k: FakeResponse(500))
+    monkeypatch.setenv("INTERNAL_API_KEY", "test-key")
+    monkeypatch.setattr(
+        statut_service.httpx,
+        "get",
+        lambda *a, **k: FakeResponse(500),
+    )
+
     assert statut_service.colis_exists(uuid.uuid4()) is None
 
 

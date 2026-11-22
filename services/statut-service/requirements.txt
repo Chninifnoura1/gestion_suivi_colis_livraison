@@ -5,3 +5,5 @@ psycopg[binary]
 python-dotenv
 httpx
 pytest
+PyJWT==2.10.1
+pydantic-settings==2.16.2

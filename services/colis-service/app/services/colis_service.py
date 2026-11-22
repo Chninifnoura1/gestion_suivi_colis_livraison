@@ -1,7 +1,8 @@
 import secrets
 from datetime import datetime
 from uuid import UUID
-
+from fastapi import HTTPException
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.colis import Colis
@@ -27,11 +28,46 @@ def generate_tracking_number(db: Session) -> str:
 
 
 # CREATE
-def create_colis(db: Session, colis_data: ColisCreate) -> Colis:
-    """Create a new parcel."""
+
+# CREATE
+def create_colis(
+    db: Session,
+    colis_data: ColisCreate,
+    agence_expedition_id: UUID,
+) -> Colis:
+    """Create a parcel and resolve its destination agency."""
+
+    # البحث عن الوكالة النشيطة في مدينة المستلم
+    agence_destination_id = db.execute(
+        text("""
+            SELECT id
+            FROM agence.agences
+            WHERE LOWER(TRIM(ville)) = LOWER(TRIM(:ville))
+              AND is_active = TRUE
+            LIMIT 1
+        """),
+        {"ville": colis_data.destinataire_ville},
+    ).scalar_one_or_none()
+
+    # رفض إنشاء colis إذا لم توجد وكالة في مدينة المستلم
+    if agence_destination_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Aucune agence active n'existe dans la ville "
+                f"{colis_data.destinataire_ville}."
+            ),
+        )
+
+    colis_fields = colis_data.model_dump(
+        exclude={"agence_expedition_id"}
+    )
 
     new_colis = Colis(
-        **colis_data.model_dump(),
+        **colis_fields,
+        agence_expedition_id=agence_expedition_id,
+        agence_destination_id=agence_destination_id,
+        agence_actuelle_id=agence_expedition_id,
         numero_suivi=generate_tracking_number(db),
     )
 
@@ -40,6 +76,7 @@ def create_colis(db: Session, colis_data: ColisCreate) -> Colis:
     db.refresh(new_colis)
 
     return new_colis
+
 
 
 # READ BY ID
@@ -57,15 +94,29 @@ def get_colis_by_tracking(db: Session, numero_suivi: str):
 
 
 # READ ALL
-def get_all_colis(db: Session, skip: int = 0, limit: int = 100):
+def get_all_colis(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    agence_id: UUID | None = None,
+):
+    query = db.query(Colis)
+
+    if agence_id is not None:
+        query = query.filter(
+            Colis.agence_actuelle_id == agence_id
+        )
+
     return (
-        db.query(Colis)
+        query
         .order_by(Colis.date_enregistrement.desc())
         .offset(skip)
         .limit(limit)
         .all()
     )
 
+
+# UPDATE
 
 # UPDATE
 def update_colis(
@@ -82,6 +133,30 @@ def update_colis(
         exclude_unset=True,
         exclude_none=True,
     )
+
+    # إذا تبدلات مدينة المستلم، نبحث عن وكالة الوجهة الجديدة
+    if "destinataire_ville" in update_data:
+        agence_destination_id = db.execute(
+            text("""
+                SELECT id
+                FROM agence.agences
+                WHERE LOWER(TRIM(ville)) = LOWER(TRIM(:ville))
+                  AND is_active = TRUE
+                LIMIT 1
+            """),
+            {"ville": update_data["destinataire_ville"]},
+        ).scalar_one_or_none()
+
+        if agence_destination_id is None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Aucune agence active n'existe dans la ville "
+                    f"{update_data['destinataire_ville']}."
+                ),
+            )
+
+        colis.agence_destination_id = agence_destination_id
 
     for field, value in update_data.items():
         setattr(colis, field, value)

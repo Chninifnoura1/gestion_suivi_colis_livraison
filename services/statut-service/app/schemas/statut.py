@@ -14,6 +14,7 @@ StatutCode = Literal[
     "ECHEC",
     "NOUVELLE_TENTATIVE",
     "LIVRE",
+    "ARRIVEE_A_L_AGENCE",
 ]
 
 
