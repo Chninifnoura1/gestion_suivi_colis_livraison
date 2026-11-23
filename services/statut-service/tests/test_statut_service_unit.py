@@ -22,6 +22,20 @@ class FakeResponse:
     def json(self):
         return self.data
 
+def make_data(code="EN_COURS"):
+    return StatutCreate(colis_id=uuid.uuid4(), code=code)
+
+
+def make_db(reference):
+    # Fausse session : db.query(Statut).filter(...).first() renvoie `reference`
+    db = MagicMock()
+    db.query.return_value.filter.return_value.first.return_value = reference
+    return db
+
+
+def make_ref(code="LIVRE", libelle="Livre"):
+    return Statut(id=uuid.uuid4(), code=code, libelle=libelle)
+
 
 def test_colis_exists_sans_configuration(monkeypatch):
     monkeypatch.delenv("COLIS_SERVICE_URL", raising=False)
@@ -99,7 +113,7 @@ def test_create_statut_notifie_le_service_notification(monkeypatch):
     appels = []
     monkeypatch.setattr(statut_service, "notify_status_change", appels.append)
 
-    result = statut_service.create_statut(make_db(make_ref()), make_data())
+    result = statut_service.create_statut(make_db(make_ref("LIVRE", "Livre")), make_data("LIVRE"))
 
     assert appels == [result]
 
@@ -107,6 +121,7 @@ def test_create_statut_notifie_le_service_notification(monkeypatch):
 def test_create_statut_notification_en_panne(monkeypatch):
     """Error case: notification service down -> status still created"""
     monkeypatch.setenv("NOTIFICATION_SERVICE_URL", "http://fake")
+    monkeypatch.setenv("INTERNAL_API_KEY", "test-key")
 
     def boom(*a, **k):
         raise httpx.ConnectError("notification down")
@@ -166,3 +181,4 @@ def test_get_history_colis_sans_statut():
     db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
     assert statut_service.get_history(db, uuid.uuid4()) == []
+
