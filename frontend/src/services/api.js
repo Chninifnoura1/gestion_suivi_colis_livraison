@@ -188,10 +188,11 @@ export async function getTracking(code) {
 
 
 
-const LIVRAISON_API = "http://localhost:8002";
-const COLIS_API = "http://localhost:8003";
-const STATUT_API = "http://localhost:5003";
-const AUTH_API = "http://localhost:8001";
+const sameOriginApi = import.meta.env.VITE_SAME_ORIGIN_API === "1";
+const LIVRAISON_API = sameOriginApi ? "" : "http://localhost:8002";
+const COLIS_API = sameOriginApi ? "" : "http://localhost:8003";
+const STATUT_API = sameOriginApi ? "" : "http://localhost:5003";
+const AUTH_API = sameOriginApi ? "" : "http://localhost:8001";
 
 async function backendGet(url, token) {
   const response = await fetch(url, {

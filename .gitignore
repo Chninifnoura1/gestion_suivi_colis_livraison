@@ -27,3 +27,4 @@ Thumbs.db
 # Local backup and temporary files
 backup_avant_trajets_20261121.sql
 /code
+.vercel/

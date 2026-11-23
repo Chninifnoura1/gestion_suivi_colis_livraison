@@ -1,0 +1,138 @@
+{
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite",
+      "buildCommand": "VITE_SAME_ORIGIN_API=1 npm run build"
+    },
+    "auth": {
+      "root": "services/auth-service",
+      "framework": "fastapi",
+      "entrypoint": "app.main:app"
+    },
+    "colis": {
+      "root": "services/colis-service",
+      "framework": "fastapi",
+      "entrypoint": "app.main:app",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "notification",
+          "format": "url",
+          "env": "NOTIFICATION_SERVICE_URL"
+        }
+      ]
+    },
+    "livraison": {
+      "root": "services/livraison-service",
+      "framework": "fastapi",
+      "entrypoint": "app.main:app",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "notification",
+          "format": "url",
+          "env": "NOTIFICATION_SERVICE_URL"
+        },
+        {
+          "type": "service",
+          "service": "colis",
+          "format": "url",
+          "env": "COLIS_SERVICE_URL"
+        }
+      ]
+    },
+    "statut": {
+      "root": "services/statut-service",
+      "framework": "fastapi",
+      "entrypoint": "app.main:app",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "notification",
+          "format": "url",
+          "env": "NOTIFICATION_SERVICE_URL"
+        },
+        {
+          "type": "service",
+          "service": "colis",
+          "format": "url",
+          "env": "COLIS_SERVICE_URL"
+        }
+      ]
+    },
+    "notification": {
+      "root": "services/notification-service",
+      "framework": "flask",
+      "entrypoint": "app:app"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/auth",
+      "destination": {
+        "service": "auth"
+      }
+    },
+    {
+      "source": "/auth/(.*)",
+      "destination": {
+        "service": "auth"
+      }
+    },
+    {
+      "source": "/api/colis",
+      "destination": {
+        "service": "colis"
+      }
+    },
+    {
+      "source": "/api/colis/(.*)",
+      "destination": {
+        "service": "colis"
+      }
+    },
+    {
+      "source": "/api/livraisons",
+      "destination": {
+        "service": "livraison"
+      }
+    },
+    {
+      "source": "/api/livraisons/(.*)",
+      "destination": {
+        "service": "livraison"
+      }
+    },
+    {
+      "source": "/api/dashboard",
+      "destination": {
+        "service": "livraison"
+      }
+    },
+    {
+      "source": "/api/dashboard/(.*)",
+      "destination": {
+        "service": "livraison"
+      }
+    },
+    {
+      "source": "/api/v1/statuts",
+      "destination": {
+        "service": "statut"
+      }
+    },
+    {
+      "source": "/api/v1/statuts/(.*)",
+      "destination": {
+        "service": "statut"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ]
+}

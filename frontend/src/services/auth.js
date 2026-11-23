@@ -1,5 +1,6 @@
 
-const AUTH_URL = "http://localhost:8001";
+const sameOriginApi = import.meta.env.VITE_SAME_ORIGIN_API === "1";
+const AUTH_URL = sameOriginApi ? "" : "http://localhost:8001";
 
 export class AuthError extends Error {
   constructor(message, status = 500) {
