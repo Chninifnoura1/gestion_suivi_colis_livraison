@@ -1,0 +1,72 @@
+{
+  "info": {
+    "name": "Notification Service",
+    "description": "API de notification colis — utilise les identifiants de démonstration de la base.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5005" },
+    { "key": "colisId", "value": "33333333-3333-4333-8333-333333333333" },
+    { "key": "livraisonId", "value": "44444444-4444-4444-8444-444444444444" },
+    { "key": "notificationId", "value": "77777777-7777-4777-8777-777777777777" },
+    { "key": "internalApiKey", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+    },
+    {
+      "name": "Notify status change",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Internal-Key", "value": "{{internalApiKey}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"colisId\": \"{{colisId}}\",\n  \"statutCode\": \"EN_COURS\",\n  \"localisation\": \"Marrakech\"\n}" },
+        "url": "{{baseUrl}}/notifications/statut"
+      }
+    },
+    {
+      "name": "Create free notification",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Internal-Key", "value": "{{internalApiKey}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"colisId\": \"{{colisId}}\",\n  \"message\": \"Bonjour Sara, votre colis SC-2026-DEMO-001 est en cours de livraison.\"\n}" },
+        "url": "{{baseUrl}}/notifications"
+      }
+    },
+    {
+      "name": "Notify delivery parcels",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Internal-Key", "value": "{{internalApiKey}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"statutCode\": \"LIVRE\",\n  \"localisation\": \"Marrakech\"\n}" },
+        "url": "{{baseUrl}}/notifications/livraison/{{livraisonId}}/statut"
+      }
+    },
+    {
+      "name": "List parcel notifications",
+      "request": { "method": "GET", "url": "{{baseUrl}}/notifications/colis/{{colisId}}" }
+    },
+    {
+      "name": "Get notification",
+      "request": { "method": "GET", "url": "{{baseUrl}}/notifications/{{notificationId}}" }
+    },
+    {
+      "name": "Retry failed notification",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "X-Internal-Key", "value": "{{internalApiKey}}" }],
+        "url": "{{baseUrl}}/notifications/{{notificationId}}/renvoyer"
+      }
+    }
+  ]
+}

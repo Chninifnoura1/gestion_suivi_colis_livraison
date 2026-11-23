@@ -17,15 +17,15 @@ class ColisBase(BaseModel):
 
     destinataire_nom: str = Field(min_length=2, max_length=150)
     destinataire_telephone: str = Field(min_length=5, max_length=30)
-    destinataire_email: EmailStr
+    destinataire_email: EmailStr | None = None
     destinataire_adresse: str = Field(min_length=5)
     destinataire_ville: str = Field(min_length=2, max_length=100)
 
 
 # CREATE
+# CREATE
 class ColisCreate(ColisBase):
-    pass
-
+    agence_expedition_id: UUID | None = None
 
 # UPDATE
 class ColisUpdate(BaseModel):
@@ -50,9 +50,15 @@ class ColisUpdate(BaseModel):
 
 
 # RESPONSE
+
+# RESPONSE
 class ColisResponse(ColisBase):
     id: UUID
     numero_suivi: str
     date_enregistrement: datetime
-
+    agence_expedition_id: UUID
+    agence_destination_id: UUID | None = None
+    agence_actuelle_id: UUID
+    can_modify: bool = False
     model_config = ConfigDict(from_attributes=True)
+

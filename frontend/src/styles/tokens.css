@@ -1,0 +1,79 @@
+/* ───────────────────────── ColisTrack · Design tokens ─────────────────────────
+   Source unique de vérité : couleurs, typographie, espacements, rayons, ombres,
+   transitions. Les composants ne contiennent aucune valeur « en dur ». */
+:root {
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-2xs: 11px; --fs-xs: 12px; --fs-sm: 13px; --fs-base: 14px; --fs-md: 15px;
+  --fs-lg: 17px; --fs-xl: 20px; --fs-2xl: 24px; --fs-3xl: 30px; --fs-hero: clamp(34px, 5vw, 54px);
+
+  --navy: #101d35; --navy-2: #172a4a; --deep: #183b63;
+  --blue: #3478f6; --blue-hover: #2a68e0; --electric: #5b9bff;
+  --orange: #f28c38; --orange-hover: #e57d28;
+
+  --bg: #f5f7fb; --surface: #ffffff; --surface-2: #f8fafd; --surface-3: #eef2f8;
+  --text: #17243a;
+  --text-2: #5a6a82;   /* secondaire, contraste AA sur blanc ; le #718096 de la charte sert pour --text-3 */
+  --text-3: #718096;
+  --border: #e4e9f1; --border-strong: #cdd6e3;
+  --overlay: rgba(10, 18, 34, 0.55);
+  --title: var(--deep);
+
+  --primary: var(--blue); --primary-hover: var(--blue-hover);
+  --primary-solid: #2f6fea; /* bleu des boutons pleins : texte blanc ≥ 4,5:1 */ --primary-solid-hover: #2760d3;
+  --primary-soft: rgba(52, 120, 246, 0.1); --primary-text: #2459c9;
+  --accent: var(--orange); --accent-soft: rgba(242, 140, 56, 0.14); --accent-text: #b45f12;
+  --success: #16a36a; --success-soft: rgba(22, 163, 106, 0.12); --success-text: #0d7a50;
+  --warning: #e9a23b; --warning-soft: rgba(233, 162, 59, 0.16); --warning-text: #96600d;
+  --danger: #dc4c4c;  --danger-soft: rgba(220, 76, 76, 0.11);  --danger-text: #b42f2f;
+  --violet: #7c5ce0;  --violet-soft: rgba(124, 92, 224, 0.12); --violet-text: #5b3cc4;
+  --teal: #0f9fb0;    --teal-soft: rgba(15, 159, 176, 0.12);   --teal-text: #0a7684;
+  --neutral: #8593a8; --neutral-soft: rgba(133, 147, 168, 0.15); --neutral-text: #56657c;
+
+  --side-bg: #101d35; --side-border: rgba(255, 255, 255, 0.07); --side-text: #a3b1c8;
+  --side-hover: rgba(255, 255, 255, 0.06); --side-active: rgba(52, 120, 246, 0.2);
+  --side-w: 264px; --side-w-compact: 76px; --header-h: 64px;
+
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-14: 56px;
+
+  /* Rayons hiérarchisés : contrôles < cartes < surfaces flottantes */
+  --r-xs: 6px; --r-sm: 8px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-full: 999px;
+
+  --sh-xs: 0 1px 2px rgba(16, 29, 53, 0.05);
+  --sh-sm: 0 1px 3px rgba(16, 29, 53, 0.06), 0 1px 2px rgba(16, 29, 53, 0.04);
+  --sh-md: 0 6px 18px -4px rgba(16, 29, 53, 0.12), 0 2px 6px rgba(16, 29, 53, 0.05);
+  --sh-lg: 0 24px 48px -12px rgba(16, 29, 53, 0.28), 0 6px 16px rgba(16, 29, 53, 0.08);
+  --focus: 0 0 0 3px rgba(52, 120, 246, 0.35);
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-fast: 120ms; --t: 200ms; --t-slow: 360ms;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a1220; --surface: #101b2f; --surface-2: #14233b; --surface-3: #1a2c48;
+  --text: #e8eef8; --text-2: #9dacc4; --text-3: #7f8fa9;
+  --border: rgba(148, 170, 205, 0.14); --border-strong: rgba(148, 170, 205, 0.28);
+  --overlay: rgba(3, 8, 18, 0.7); --title: #f1f5fc;
+  --primary-soft: rgba(91, 155, 255, 0.15); --primary-text: #8db6ff;
+  --accent-soft: rgba(242, 140, 56, 0.16); --accent-text: #f6a867;
+  --success-soft: rgba(22, 163, 106, 0.18); --success-text: #4ad39a;
+  --warning-soft: rgba(233, 162, 59, 0.18); --warning-text: #f2bd6a;
+  --danger-soft: rgba(220, 76, 76, 0.2);    --danger-text: #f08a8a;
+  --violet-soft: rgba(124, 92, 224, 0.22);  --violet-text: #b7a3f7;
+  --teal-soft: rgba(15, 159, 176, 0.2);     --teal-text: #55d0de;
+  --neutral-soft: rgba(133, 147, 168, 0.2); --neutral-text: #aebbd0;
+  --side-bg: #0b1424; --side-active: rgba(91, 155, 255, 0.16);
+  --sh-xs: 0 1px 2px rgba(0, 0, 0, 0.3); --sh-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --sh-md: 0 8px 22px -6px rgba(0, 0, 0, 0.55); --sh-lg: 0 26px 54px -12px rgba(0, 0, 0, 0.7);
+  --focus: 0 0 0 3px rgba(91, 155, 255, 0.4);
+}
+
+.tone-neutral { --tone: var(--neutral-text); --tone-bg: var(--neutral-soft); --tone-dot: var(--neutral); }
+.tone-info    { --tone: var(--primary-text); --tone-bg: var(--primary-soft); --tone-dot: var(--blue); }
+.tone-warning { --tone: var(--warning-text); --tone-bg: var(--warning-soft); --tone-dot: var(--warning); }
+.tone-violet  { --tone: var(--violet-text);  --tone-bg: var(--violet-soft);  --tone-dot: var(--violet); }
+.tone-teal    { --tone: var(--teal-text);    --tone-bg: var(--teal-soft);    --tone-dot: var(--teal); }
+.tone-orange  { --tone: var(--accent-text);  --tone-bg: var(--accent-soft);  --tone-dot: var(--orange); }
+.tone-success { --tone: var(--success-text); --tone-bg: var(--success-soft); --tone-dot: var(--success); }
+.tone-danger  { --tone: var(--danger-text);  --tone-bg: var(--danger-soft);  --tone-dot: var(--danger); }

@@ -20,7 +20,10 @@ class Settings(BaseSettings):
     # Local execution uses localhost.
     DATABASE_HOST: str = "localhost"
     DATABASE_PORT: int = 5432
-
+    AUTH_SECRET_KEY: str
+    NOTIFICATION_SERVICE_URL: str = "http://notification-service:5005"
+    INTERNAL_API_KEY: str
+    JWT_ALGORITHM: str = "HS256"
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
         env_file_encoding="utf-8",

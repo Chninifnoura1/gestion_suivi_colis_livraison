@@ -23,9 +23,24 @@ class Colis(Base):
     )
 
     description = Column(Text, nullable=True)
-
+    destinataire_email = Column(String(255), nullable=True)
     poids = Column(
         Numeric(10, 2),
+        nullable=False,
+    )
+
+    agence_expedition_id = Column(
+        UUID(as_uuid=True),
+        nullable=False,
+    )
+
+    agence_destination_id = Column(
+        UUID(as_uuid=True),
+        nullable=True,
+    )
+
+    agence_actuelle_id = Column(
+        UUID(as_uuid=True),
         nullable=False,
     )
 
@@ -36,7 +51,7 @@ class Colis(Base):
 
     destinataire_nom = Column(String(150), nullable=False)
     destinataire_telephone = Column(String(30), nullable=False)
-    destinataire_email = Column(String(255), nullable=False)
+
     destinataire_adresse = Column(Text, nullable=False)
     destinataire_ville = Column(String(100), nullable=False)
 
