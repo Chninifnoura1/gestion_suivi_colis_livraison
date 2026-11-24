@@ -146,7 +146,7 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       COLIS_SERVICE_URL: http://colis-service:8000
       NOTIFICATION_SERVICE_URL: http://notification-service:5005
-
+      STATUT_SERVICE_URL: http://statut-service:5003
     ports:
       - "8004:8000"
 
@@ -154,6 +154,8 @@ services:
       postgres:
         condition: service_healthy
       notification-service:
+        condition: service_started
+      statut-service:
         condition: service_started
 
     networks:

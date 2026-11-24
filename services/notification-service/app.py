@@ -191,7 +191,37 @@ def create_app(config=None, notification_service=None):
             raise ValidationError("emailDestinataire doit être une adresse email valide")
         notification = notification_service.creer(colis_id, message.strip(), email)
         return jsonify(_json_value(notification)), 201
+    @app.post("/notifications/admins")
+    def create_admin_notification():
+        data = request.get_json(silent=True)
 
+        if not isinstance(data, dict):
+            raise ValidationError("Le corps JSON est requis")
+
+        admin_id = _uuid(data.get("admin_id"), "admin_id")
+        agence_id = _uuid(data.get("agence_id"), "agence_id")
+        livraison_id = _uuid(data.get("livraison_id"), "livraison_id")
+
+        title = data.get("title")
+        message = data.get("message")
+        category = data.get("category", "Système")
+
+        if not isinstance(title, str) or not title.strip():
+            raise ValidationError("title est requis")
+
+        if not isinstance(message, str) or not message.strip():
+            raise ValidationError("message est requis")
+
+        notification = notification_service.creer_notification_admin(
+            admin_id=admin_id,
+            agence_id=agence_id,
+            livraison_id=livraison_id,
+            title=title.strip(),
+            message=message.strip(),
+            category=category,
+        )
+
+        return jsonify(_json_value(notification)), 201
     @app.post("/notifications/livraison/<livraison_id>/statut")
     def notify_delivery(livraison_id):
         delivery_id = _uuid(livraison_id, "livraison_id")

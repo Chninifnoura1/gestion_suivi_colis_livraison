@@ -34,6 +34,7 @@ export const NAV = {
       { to: "/admin/chargement-colis", label: "Chargement des colis", icon: PackageCheck },
       { to: "/admin/reception-colis", label: "Réception des colis", icon: PackageCheck },
       { to: "/admin/historique", label: "Historique des statuts", icon: History },
+      { to: "/admin/notifications", label: "Notifications", icon: Bell },
     ] },
   ],
   LIVREUR: [

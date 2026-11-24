@@ -856,8 +856,8 @@ export async function saveCourier(user, data, id, token) {
     telephone: data.phone?.trim() || null,
     disponible: data.available === "Disponible",
     is_active: data.active === "Actif",
-    peut_transport: Boolean(data.peut_transport),
-    peut_livrer_client: Boolean(data.peut_livrer_client),
+    peut_transport: true,
+    peut_livrer_client: false,
   };
 
   if (id) {
@@ -1732,15 +1732,17 @@ function seedNotifications(user) {
 }
 
 export async function getNotifications(user, token) {
-  if (user.role === "LIVREUR") {
+  if (user.role === "LIVREUR" || user.role === "ADMIN") {
     if (!token) {
       throw new ApiError(401, "Session expirée. Veuillez vous reconnecter.");
     }
 
-    const notifications = await backendGet(
-      `${LIVRAISON_API}/api/livraisons/notifications/livreur`,
-      token
-    );
+    const endpoint =
+      user.role === "ADMIN"
+        ? `${LIVRAISON_API}/api/livraisons/notifications/admin`
+        : `${LIVRAISON_API}/api/livraisons/notifications/livreur`;
+
+    const notifications = await backendGet(endpoint, token);
 
     return notifications.map((n) => ({
       ...n,
@@ -1759,13 +1761,14 @@ export async function getNotifications(user, token) {
 }
 
 export async function markNotification(user, id, read = true, token) {
-  if (user.role === "LIVREUR") {
+  if (user.role === "LIVREUR" || user.role === "ADMIN") {
     if (read) {
-      return backendPatch(
-        `${LIVRAISON_API}/api/livraisons/notifications/livreur/${id}/read`,
-        token,
-        {}
-      );
+      const endpoint =
+        user.role === "ADMIN"
+          ? `${LIVRAISON_API}/api/livraisons/notifications/admin/${id}/read`
+          : `${LIVRAISON_API}/api/livraisons/notifications/livreur/${id}/read`;
+
+      return backendPatch(endpoint, token, {});
     }
     return;
   }
@@ -1776,7 +1779,7 @@ export async function markNotification(user, id, read = true, token) {
 }
 
 export async function markAllNotifications(user, token) {
-  if (user.role === "LIVREUR") {
+  if (user.role === "LIVREUR" || user.role === "ADMIN") {
     const notifications = await getNotifications(user, token);
 
     await Promise.all(

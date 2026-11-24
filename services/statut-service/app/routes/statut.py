@@ -1,17 +1,30 @@
 ﻿
+import secrets
 from uuid import UUID
-
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Header, status
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from sqlalchemy import text
+
+from app.config import settings
 from app.database import get_db
 from app.dependencies.auth import get_current_user
+from app.models.statut import Statut, HistoriqueStatut
 from app.schemas.statut import StatutCreate, StatutResponse
 from app.services import statut_service
 
 
+
 router = APIRouter()
+
+
+class PriseEnChargeInternal(BaseModel):
+    colis_ids: list[UUID] = Field(min_length=1)
+    utilisateur_id: UUID
+    localisation: str | None = None
+    commentaire: str | None = None
 
 
 ADMIN_DEPART_STATUSES = {
@@ -199,6 +212,105 @@ def create_statut(
         raise HTTPException(
             status_code=422,
             detail=str(error),
+        )
+
+@router.post("/internal/prise-en-charge")
+def prise_en_charge_internal(
+    data: PriseEnChargeInternal,
+    x_internal_api_key: str | None = Header(
+        default=None,
+        alias="X-Internal-API-Key",
+    ),
+    db: Session = Depends(get_db),
+):
+    if (
+        not x_internal_api_key
+        or not secrets.compare_digest(
+            x_internal_api_key,
+            settings.INTERNAL_API_KEY,
+        )
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Acces interne refuse",
+        )
+
+    try:
+        statut_ref = (
+            db.query(Statut)
+            .filter(Statut.code == "PRIS_EN_CHARGE")
+            .first()
+        )
+
+        if not statut_ref:
+            raise HTTPException(
+                status_code=500,
+                detail="Statut PRIS_EN_CHARGE introuvable",
+            )
+
+        enregistres = []
+        deja_enregistres = []
+
+        for colis_id in dict.fromkeys(data.colis_ids):
+
+            existe = statut_service.colis_exists(colis_id)
+
+            if existe is None:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Verification du colis impossible: {colis_id}",
+                )
+
+            if not existe:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Colis introuvable: {colis_id}",
+                )
+
+            derniere_entree = (
+                db.query(HistoriqueStatut)
+                .filter(HistoriqueStatut.colis_id == colis_id)
+                .order_by(
+                    HistoriqueStatut.date_changement.desc(),
+                    HistoriqueStatut.id.desc(),
+                )
+                .first()
+            )
+
+            if derniere_entree and derniere_entree.code == "PRIS_EN_CHARGE":
+                deja_enregistres.append(str(colis_id))
+                continue
+
+            entree = HistoriqueStatut(
+                colis_id=colis_id,
+                statut_id=statut_ref.id,
+                utilisateur_id=data.utilisateur_id,
+                localisation=data.localisation,
+                commentaire=data.commentaire,
+            )
+
+            db.add(entree)
+            enregistres.append(str(colis_id))
+
+        db.commit()
+
+        return {
+            "message": "Prise en charge enregistree",
+            "statut": "PRIS_EN_CHARGE",
+            "enregistres": enregistres,
+            "deja_enregistres": deja_enregistres,
+        }
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except Exception:
+        db.rollback()
+        logging.exception("Erreur prise en charge interne")
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur lors de l'enregistrement de la prise en charge",
         )
 
 @router.get("/colis/{colis_id}/actuel", response_model=StatutResponse)

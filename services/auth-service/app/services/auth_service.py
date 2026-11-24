@@ -226,8 +226,8 @@ def create_courier(db: Session, data, current_user: User):
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
         ville_actuelle=agence.ville.strip(),
-        peut_transport=data.peut_transport,
-        peut_livrer_client=data.peut_livrer_client,
+        peut_transport=True,
+        peut_livrer_client=False,
     )
 
     try:
@@ -344,8 +344,8 @@ def update_courier(db: Session, courier_id, data, current_user: User):
     courier.telephone = data.telephone.strip() if data.telephone else None
     courier.disponible = data.disponible
     courier.is_active = data.is_active
-    courier.peut_transport = data.peut_transport
-    courier.peut_livrer_client = data.peut_livrer_client
+    courier.peut_transport = True
+    courier.peut_livrer_client = False
     courier.updated_at = datetime.now(timezone.utc)
 
     try:

@@ -47,6 +47,29 @@ class NotificationService:
 
         return notification
 
+
+    def creer_notification_admin(
+        self, admin_id, agence_id, livraison_id, title, message,
+        category="Système"
+    ):
+        notification = self.notifications.create_admin_notification(
+            admin_id=admin_id,
+            agence_id=agence_id,
+            livraison_id=livraison_id,
+            title=title,
+            message=message,
+            category=category,
+        )
+
+        if notification is None:
+            logger.info(
+                "Admin notification already exists for mission %s and agency %s",
+                livraison_id,
+                agence_id,
+            )
+
+        return notification
+ 
     def creer(self, colis_id, message, email_destinataire=None, livraison_id=None):
         parcel = self._get_parcel(colis_id)
         email = email_destinataire or parcel["destinataire_email"]

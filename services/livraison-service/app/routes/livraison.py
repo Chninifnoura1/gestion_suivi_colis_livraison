@@ -72,6 +72,47 @@ router = APIRouter(
 )
 
 
+
+def notifier_admin_arrivee(admin_id, agence_id, livraison_id):
+    notification_service_url = os.getenv("NOTIFICATION_SERVICE_URL")
+    internal_api_key = os.getenv("INTERNAL_API_KEY")
+
+    if not notification_service_url or not internal_api_key:
+        logger.error("Configuration notification-service manquante")
+        return
+
+    try:
+        response = httpx.post(
+            f"{notification_service_url}/notifications/admins",
+            headers={
+                "X-Internal-Key": internal_api_key,
+            },
+            json={
+                "admin_id": str(admin_id),
+                "agence_id": str(agence_id),
+                "livraison_id": str(livraison_id),
+                "title": "Arrivée du livreur à l'agence",
+                "message": (
+                    "Le livreur est arrivé. "
+                    "Veuillez confirmer la réception des colis."
+                ),
+                "category": "Système",
+            },
+            timeout=5.0,
+        )
+
+        response.raise_for_status()
+
+        logger.info(
+            "Notification d'arrivee envoyee a l'administrateur %s",
+            admin_id,
+        )
+
+    except Exception:
+        logger.exception(
+            "Erreur lors de l'envoi de notification a l'administrateur %s",
+            admin_id,
+        )
 @router.get("/notifications/livreur")
 def get_notifications_livreur(
     current_user=Depends(get_current_livreur),
@@ -134,7 +175,104 @@ def mark_notification_livreur_read(
     db.commit()
 
     return {"message": "Notification marquee comme lue"}
+@router.get("/notifications/admin")
+def get_notifications_admin(
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(
+            status_code=403,
+            detail="Acces reserve aux administrateurs d'agence",
+        )
 
+    agence_id = current_user["agence_id"]
+
+    if not agence_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Aucune agence associee",
+        )
+
+    rows = db.execute(
+        text("""
+            SELECT
+                id,
+                livraison_id,
+                agence_id,
+                category,
+                title,
+                message,
+                is_read,
+                created_at
+            FROM notification.notifications_admins
+            WHERE admin_id = :admin_id
+              AND agence_id = :agence_id
+            ORDER BY created_at DESC
+        """),
+        {
+            "admin_id": current_user["id"],
+            "agence_id": agence_id,
+        },
+    ).mappings().all()
+
+    return [
+        {
+            **dict(row),
+            "id": str(row["id"]),
+            "livraison_id": str(row["livraison_id"]),
+            "agence_id": str(row["agence_id"]),
+            "read": row["is_read"],
+        }
+        for row in rows
+    ]
+
+
+@router.patch("/notifications/admin/{notification_id}/read")
+def mark_notification_admin_read(
+    notification_id: UUID,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(
+            status_code=403,
+            detail="Acces reserve aux administrateurs d'agence",
+        )
+
+    agence_id = current_user["agence_id"]
+
+    if not agence_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Aucune agence associee",
+        )
+
+    row = db.execute(
+        text("""
+            UPDATE notification.notifications_admins
+            SET is_read = TRUE
+            WHERE id = :notification_id
+              AND admin_id = :admin_id
+              AND agence_id = :agence_id
+            RETURNING id
+        """),
+        {
+            "notification_id": notification_id,
+            "admin_id": current_user["id"],
+            "agence_id": agence_id,
+        },
+    ).first()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Notification introuvable",
+        )
+
+    db.commit()
+
+    return {"message": "Notification marquee comme lue"}
 @router.post(
     "/",
     response_model=LivraisonResponse,
@@ -1859,6 +1997,7 @@ def demarrer_trajet_multi_etapes(
             {"etape_id": deuxieme_etape["id"]},
         )
 
+
         # 6. Demarrer la mission
         db.execute(
             text("""
@@ -1870,7 +2009,64 @@ def demarrer_trajet_multi_etapes(
             {"livraison_id": livraison_id},
         )
 
+        # 7. Recuperer les colis transportes sur la premiere etape
+        colis_transportes = db.execute(
+            text("""
+                SELECT DISTINCT lc.colis_id
+                FROM livraison.livraison_colis lc
+                JOIN livraison.etapes_trajet ec
+                    ON ec.livraison_id = lc.livraison_id
+                   AND ec.agence_id = lc.agence_chargement_id
+                JOIN livraison.etapes_trajet ed
+                    ON ed.livraison_id = lc.livraison_id
+                   AND ed.agence_id = lc.agence_dechargement_id
+                WHERE lc.livraison_id = :livraison_id
+                  AND ec.ordre <= 0
+                  AND ed.ordre > 0
+            """),
+            {"livraison_id": livraison_id},
+        ).scalars().all()
+
+        # 8. Enregistrer automatiquement PRIS_EN_CHARGE
+        if colis_transportes:
+            statut_service_url = os.getenv("STATUT_SERVICE_URL")
+            internal_api_key = os.getenv("INTERNAL_API_KEY")
+
+            if not statut_service_url or not internal_api_key:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Configuration du service statut manquante",
+                )
+
+            try:
+                response = httpx.post(
+                    f"{statut_service_url}/api/v1/statuts/internal/prise-en-charge",
+                    headers={
+                        "X-Internal-API-Key": internal_api_key,
+                    },
+                    json={
+                        "colis_ids": [
+                            str(colis_id)
+                            for colis_id in colis_transportes
+                        ],
+                        "utilisateur_id": str(current_user.id),
+                        "commentaire": "Depart du trajet inter-agences",
+                    },
+                    timeout=15,
+                )
+                response.raise_for_status()
+
+            except httpx.HTTPError:
+                logging.exception(
+                    "Erreur lors de l'enregistrement des statuts PRIS_EN_CHARGE"
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail="Impossible d'enregistrer les statuts des colis",
+                )
+
         db.commit()
+
 
         return {
             "message": "Trajet demarre avec succes",
@@ -1976,7 +2172,31 @@ def declarer_arrivee_etape(
         )
 
         db.commit()
+        # 4. Notifier l'administrateur de l'agence d'arrivee
+        admin = db.execute(
+            text("""
+                SELECT u.id
+                FROM auth.users u
+                JOIN auth.roles r ON r.id = u.role_id
+                WHERE r.nom = 'ADMIN'
+                  AND u.agence_id = :agence_id
+                  AND u.is_active = TRUE
+                LIMIT 1
+            """),
+            {"agence_id": agence_id},
+        ).mappings().first()
 
+        if admin:
+            notifier_admin_arrivee(
+                admin_id=admin["id"],
+                agence_id=agence_id,
+                livraison_id=livraison_id,
+            )
+        else:
+            logger.warning(
+                "Aucun administrateur actif pour l'agence %s",
+                agence_id,
+            )
         return {
             "message": "Arrivee enregistree avec succes",
             "livraison_id": str(livraison_id),

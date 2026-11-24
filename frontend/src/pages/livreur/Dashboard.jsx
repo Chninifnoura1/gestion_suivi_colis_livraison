@@ -109,14 +109,14 @@ export default function CourierDashboard() {
                   Itinéraire
                 </Button>
 
-                <Button
-                  variant="accent"
-                  size="lg"
-                  iconRight={ArrowRight}
-                  to={`/livreur/livraisons/${n.parcelId}`}
-                >
-                  {n.status === "assigned" ? "Commencer" : "Continuer"}
-                </Button>
+              <Button
+                variant="accent"
+                size="lg"
+                iconRight={ArrowRight}
+                to="/livreur/trajets"
+              >
+                {n.status === "assigned" ? "Commencer" : "Continuer"}
+              </Button>
               </div>
             </section>
           ) : (
@@ -178,9 +178,9 @@ export default function CourierDashboard() {
           <CardHeader
             title="Activité récente"
             action={
-              <Button to="/livreur/livraisons" variant="ghost" size="sm">
-                Mes livraisons
-              </Button>
+            <Button to="/livreur/trajets" variant="ghost" size="sm">
+              Mes trajets
+            </Button>
             }
           />
 

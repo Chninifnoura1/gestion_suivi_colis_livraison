@@ -69,8 +69,8 @@ class CourierCreate(BaseModel):
     telephone: str | None = None
     disponible: bool = True
     is_active: bool = True
-    peut_transport: bool = False
-    peut_livrer_client: bool = True
+    peut_transport: bool = True
+    peut_livrer_client: bool = False
 
 
 class CourierUpdate(BaseModel):
@@ -80,8 +80,8 @@ class CourierUpdate(BaseModel):
     telephone: str | None = Field(default=None, max_length=30)
     disponible: bool
     is_active: bool
-    peut_transport: bool = False
-    peut_livrer_client: bool = True
+    peut_transport: bool = True
+    peut_livrer_client: bool = False
 
 class VilleActuelleUpdate(BaseModel):
     ville_actuelle: str = Field(min_length=1, max_length=100)

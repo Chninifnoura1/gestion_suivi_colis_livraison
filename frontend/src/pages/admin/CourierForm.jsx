@@ -72,8 +72,8 @@ export default function CourierForm() {
       confirm: "",
       available: "Disponible",
       active: "Actif",
-      peut_transport: false,
-      peut_livrer_client: true,
+      peut_transport: true,
+      peut_livrer_client: false,
     },
     schema
   );
@@ -89,8 +89,8 @@ export default function CourierForm() {
         confirm: "",
         available: c.available ? "Disponible" : "Indisponible",
         active: c.active ? "Actif" : "Inactif",
-        peut_transport: Boolean(c.peutTransport),
-        peut_livrer_client: Boolean(c.peutLivrerClient),
+        peut_transport: true,
+        peut_livrer_client: false,
       });
     }
   }, [c]);
@@ -220,24 +220,6 @@ export default function CourierForm() {
             options={["Actif", "Inactif"]}
             {...f("active")}
           />
-
-          {edit && (
-            <div className="span-2">
-              <h4>Autorisations du livreur</h4>
-
-              <Checkbox
-                label="Transporter les colis entre les agences"
-                checked={form.values.peut_transport}
-                {...f("peut_transport")}
-              />
-
-              <Checkbox
-                label="Effectuer les livraisons chez les clients"
-                checked={form.values.peut_livrer_client}
-                {...f("peut_livrer_client")}
-              />
-            </div>
-          )}
         </FormSection>
 
         <div className="form-actions">

@@ -120,3 +120,49 @@ class NotificationRepository:
             return connection.execute(
                 query, (notification_id, livreur_id)
             ).fetchone()
+
+
+    
+    def create_admin_notification(
+        self, admin_id, agence_id, livraison_id, title, message,
+        category="Système"
+    ):
+        query = """
+            INSERT INTO notification.notifications_admins
+                (admin_id, agence_id, livraison_id, category, title, message)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (livraison_id, agence_id) DO NOTHING
+            RETURNING id, admin_id, agence_id, livraison_id,
+                      category, title, message, is_read, created_at
+        """
+        with self.connection_factory(self.config) as connection:
+            return connection.execute(
+                query,
+                (admin_id, agence_id, livraison_id, category, title, message),
+            ).fetchone()
+
+    def list_admin_notifications(self, admin_id, agence_id):
+        query = """
+            SELECT id, admin_id, agence_id, livraison_id,
+                   category, title, message, is_read, created_at
+            FROM notification.notifications_admins
+            WHERE admin_id = %s AND agence_id = %s
+            ORDER BY created_at DESC
+        """
+        with self.connection_factory(self.config) as connection:
+            return connection.execute(
+                query, (admin_id, agence_id)
+            ).fetchall()
+
+    def mark_admin_notification_read(self, notification_id, admin_id, agence_id):
+        query = """
+            UPDATE notification.notifications_admins
+            SET is_read = TRUE
+            WHERE id = %s AND admin_id = %s AND agence_id = %s
+            RETURNING id, admin_id, agence_id, livraison_id,
+                      category, title, message, is_read, created_at
+        """
+        with self.connection_factory(self.config) as connection:
+            return connection.execute(
+                query, (notification_id, admin_id, agence_id)
+            ).fetchone()
