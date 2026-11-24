@@ -8,10 +8,18 @@ from sqlalchemy.orm import sessionmaker
 
 from app.main import app
 from app.database import engine, get_db
+from app.dependencies.auth import get_current_user
 from app.services import statut_service
 
 
 AGENCE_AGADIR_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+ADMIN_ID = "11111111-1111-4111-8111-111111111111"
+FAKE_ADMIN = {
+    "id": uuid.UUID(ADMIN_ID),
+    "agence_id": uuid.UUID(AGENCE_AGADIR_ID),
+    "is_active": True,
+    "role": "ADMIN",
+}
 CURRENT_COLIS_ID = None
 
 
@@ -32,7 +40,7 @@ def isolate_database_and_external_services(monkeypatch):
                 id,
                 numero_suivi,
                 poids,
-                agence_expedition_id,
+                agence_expedition_id, agence_actuelle_id,
                 expediteur_nom,
                 expediteur_telephone,
                 expediteur_adresse,
@@ -47,7 +55,7 @@ def isolate_database_and_external_services(monkeypatch):
                 :id,
                 :numero_suivi,
                 1.00,
-                :agence_id,
+                :agence_id, :agence_id,
                 'Expediteur Test',
                 '0600000000',
                 'Adresse Test',
@@ -82,6 +90,7 @@ def isolate_database_and_external_services(monkeypatch):
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: FAKE_ADMIN
 
     monkeypatch.setattr(
         statut_service,
@@ -132,17 +141,17 @@ def test_create_statut_ok():
     assert body["code"] == "EN_COURS"
     assert body["libelle"]
     assert body["localisation"] == "Casablanca"
-    assert body["utilisateur_id"] is None
+    assert body["utilisateur_id"] == ADMIN_ID
 
 
-def test_create_statut_echec_avec_motif():
+def test_create_statut_echec_refuse_a_un_admin():
+    """ECHEC est reserve aux livreurs : un ADMIN recoit 403"""
     response = post_statut(
         new_colis_id(),
         "ECHEC",
         motif_echec="Destinataire absent",
     )
-    assert response.status_code == 201
-    assert response.json()["motif_echec"] == "Destinataire absent"
+    assert response.status_code == 403
 
 
 def test_create_statut_code_invalide():
@@ -197,7 +206,7 @@ def test_statut_actuel_colis_sans_statut():
 
 def test_historique_dans_l_ordre():
     colis_id = new_colis_id()
-    etapes = ["CREE", "EN_COURS", "LIVRE"]
+    etapes = ["CREE", "PRIS_EN_CHARGE", "EN_COURS"]
 
     for etape in etapes:
         post_statut(colis_id, etape)
@@ -222,3 +231,21 @@ def test_colis_id_invalide():
         "/api/v1/statuts/colis/abc/actuel"
     )
     assert response.status_code == 422
+
+
+def test_create_statut_sans_token():
+    """Sans connexion : 401"""
+    app.dependency_overrides.pop(get_current_user)
+    response = post_statut(new_colis_id(), "EN_COURS")
+    assert response.status_code == 401
+
+
+def test_create_statut_admin_autre_agence():
+    """Un ADMIN d'une autre agence ne peut pas modifier ce colis : 403"""
+    app.dependency_overrides[get_current_user] = lambda: {
+        **FAKE_ADMIN,
+        "agence_id": uuid.uuid4(),
+    }
+    response = post_statut(new_colis_id(), "EN_COURS")
+    assert response.status_code == 403
+
